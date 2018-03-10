@@ -5,9 +5,9 @@ a neural netork-based visualization tool developed for
 single cell RNA sequencing datasets.
 
 Reference:
-  Neural Data Visualization for Scalable and Generalizable Single Cell Analysis
-  Hyunghoon Cho, Bonnie Berger, Jian Peng
-  Under review, 2018
+"Neural Data Visualization for Scalable and Generalizable Single Cell Analysis",
+Hyunghoon Cho, Bonnie Berger, and Jian Peng,
+Under review, 2018
   
 Contact for questions about software:
-  Hoon Cho, hhcho@mit.edu
+Hoon Cho, hhcho@mit.edu
