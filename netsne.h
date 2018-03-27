@@ -57,7 +57,7 @@ public:
   int N_SAMPLE_LOCAL = 20;
   double BATCH_FRAC = 0.05;
   double MIN_SAMPLE_Z = 0.1;
-  double LEARN_RATE = 0.005;
+  double LEARN_RATE = 0.02;
   double L2_REG = 0.01;
   int STOP_LYING = 250;
   std::string MODEL_PREFIX = "";
@@ -71,9 +71,10 @@ public:
   bool COMPUTE_INIT = false;
   bool MATCH_POS_NEG = false;
   bool BATCH_NORM = false;
-  int NUM_LAYERS = 3;
-  int NUM_UNITS = 200;
+  int NUM_LAYERS = 2;
+  int NUM_UNITS = 50;
   int PERM_ITER = INT_MAX;
+  int CACHE_ITER = INT_MAX;
   std::string ACT_FN = "relu";
   bool SGD_FLAG = true;
 

@@ -59,7 +59,7 @@ int main(int argc, char **argv) {
     ("max-iter", po::value<int>()->value_name("NUM")->default_value(1000), "maximum number of iterations")
     ("rand-seed", po::value<int>()->value_name("NUM")->default_value(-1), "seed for random number generator; to use current time as seed set it to -1")
     ("theta", po::value<double>()->value_name("NUM")->default_value(0.5, "0.5"), "a value between 0 and 1 that controls the accuracy-efficiency tradeoff in SPTree for gradient computation; 0 means exact")
-    ("learn-rate", po::value<double>()->value_name("NUM")->default_value(0.01, "0.01"), "learning rate for gradient steps")
+    ("learn-rate", po::value<double>()->value_name("NUM")->default_value(0.02, "0.02"), "learning rate for gradient steps")
     ("mom-init", po::value<double>()->value_name("NUM")->default_value(0.5, "0.5"), "initial momentum between 0 and 1")
     ("mom-final", po::value<double>()->value_name("NUM")->default_value(0.8, "0.8"), "final momentum between 0 and 1 (switch point controlled by --mom-switch-iter)")
     ("mom-switch-iter", po::value<int>()->value_name("NUM")->default_value(250), "duration (number of iterations) of initial momentum")
@@ -75,12 +75,13 @@ int main(int argc, char **argv) {
     ("num-input-feat", po::value<int>()->value_name("NUM"), "if set, use only the first NUM features for the embedding function")
     ("init-map", po::bool_switch()->default_value(false), "output initial mapping for the entire data")
     ("num-layers", po::value<int>()->value_name("NUM")->default_value(2), "number of layers in the neural network")
-    ("num-units", po::value<int>()->value_name("NUM")->default_value(200), "number of units for each layer in the neural network")
+    ("num-units", po::value<int>()->value_name("NUM")->default_value(50), "number of units for each layer in the neural network")
     ("act-fn", po::value<string>()->value_name("STR")->default_value("relu"), "activation function of the neural network; 'sigmoid' or 'relu'")
     ("test-model", po::bool_switch()->default_value(false), "if set, use the model provided with --init-model-prefix and visualize the entire data set then terminate without training")
     ("l2-reg", po::value<double>()->value_name("NUM")->default_value(0, "0"), "L2 regularization parameter")
-    ("perm-iter", po::value<int>()->value_name("NUM")->default_value(INT_MAX, "INT_MAX"), "How often to permute ordering for mini-batching")
-    ("no-sgd", po::bool_switch()->default_value(false), "if set, do not use SGD acceleration. equivalent to t-SNE with an additional backpropagation step to train a neural network. effective for small datasets")
+    ("perm-iter", po::value<int>()->value_name("NUM")->default_value(INT_MAX, "INT_MAX"), "After every NUM iterations, permute the ordering of data points for fast mini-batching")
+    ("cache-iter", po::value<int>()->value_name("NUM")->default_value(INT_MAX, "INT_MAX"), "After every NUM iterations, write intermediary embeddings and parameters to disk. Final embedding is always reported.")
+    ("no-sgd", po::bool_switch()->default_value(false), "if set, do not use SGD acceleration; equivalent to t-SNE with an additional backpropagation step to train a neural network. Effective for small datasets")
 
   ;
 

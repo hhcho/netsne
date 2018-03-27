@@ -169,8 +169,9 @@ bool NETSNE::run(int N, unsigned int *row_P, unsigned int *col_P, double *val_P,
                mat &X, mat &Y, int no_dims, double theta, int rand_seed,
                int max_iter, boost::filesystem::path outdir) {
 
+  bool use_sgd = SGD_FLAG;
   bool use_target_Y = val_P == NULL;
-  if (use_target_Y) {
+  if (use_target_Y || !use_sgd) {
     N_SAMPLE_LOCAL = 0;
     MIN_SAMPLE_Z = 0;
   }
@@ -189,7 +190,9 @@ bool NETSNE::run(int N, unsigned int *row_P, unsigned int *col_P, double *val_P,
 
   printf("Feature matrix: %llu x %llu\n", X.n_rows, X.n_cols);
   printf("eta: %f, max_iter: %d, stop_lying: %d\n", LEARN_RATE, max_iter, stop_lying_iter);
-  printf("batch_frac: %f, n_sample_local: %d\n", BATCH_FRAC, N_SAMPLE_LOCAL);
+  if (use_sgd) {
+    printf("batch_frac: %f, n_sample_local: %d\n", BATCH_FRAC, N_SAMPLE_LOCAL);
+  }
 
   if(rand_seed >= 0) {
     printf("Using random seed: %d\n", rand_seed);
@@ -406,10 +409,9 @@ bool NETSNE::run(int N, unsigned int *row_P, unsigned int *col_P, double *val_P,
   }
   
 
-  if (!use_target_Y) {
+  if (!use_target_Y && use_sgd) {
     printf("Sorting P ... ");
     sort_P(N, row_P, col_P, val_P);
-    //save_P(N, row_P, col_P, val_P, "P_sorted.dat");
     printf("done\n");
   }
 
@@ -423,7 +425,7 @@ bool NETSNE::run(int N, unsigned int *row_P, unsigned int *col_P, double *val_P,
   }
 
   vec P_rowsum(N);
-  if (!use_target_Y) {
+  if (!use_target_Y && use_sgd) {
     for (int i = 0; i < N; i++) {
       // Note P is sorted
       // Add small values first for numerical stability
@@ -450,14 +452,23 @@ bool NETSNE::run(int N, unsigned int *row_P, unsigned int *col_P, double *val_P,
     printf("P_rowsum computed\n");
   }
 
-  int subN = ceil(N * BATCH_FRAC);
-  int nbatch = ((N-1) / subN) + 1;
-  int min_sample = ceil(N * MIN_SAMPLE_Z);
-  bool map_all_flag = min_sample == N;
+  int subN, nbatch, min_sample;
 
-  printf("subN: %d\n", subN);
-  printf("nbatch: %d\n", nbatch);
-  printf("min_sample: %d\n", min_sample);
+  if (use_sgd) {
+    subN = ceil(N * BATCH_FRAC);
+    nbatch = ((N-1) / subN) + 1;
+    min_sample = ceil(N * MIN_SAMPLE_Z);
+
+    printf("subN: %d\n", subN);
+    printf("nbatch: %d\n", nbatch);
+    printf("min_sample: %d\n", min_sample);
+  } else {
+    subN = N;
+    nbatch = 1;
+    min_sample = N;
+  }
+
+  bool map_all_flag = min_sample == N;
   
   Col<unsigned int> row_P_mini(subN + 1);
   Col<unsigned int> col_P_mini(subN * N_SAMPLE_LOCAL);
@@ -548,7 +559,7 @@ bool NETSNE::run(int N, unsigned int *row_P, unsigned int *col_P, double *val_P,
 
     tic();
 
-    if (iter == 0 || (PERM_ITER > 0 && iter % PERM_ITER == 0)) {
+    if (use_sgd && (iter == 0 || (PERM_ITER > 0 && iter % PERM_ITER == 0))) {
       /* Permute X and P for fast mini-batching */
       printf("Permuting data points ... "); tic();
       randperm(perm_indices, X); // in-place shuffle
@@ -594,10 +605,12 @@ bool NETSNE::run(int N, unsigned int *row_P, unsigned int *col_P, double *val_P,
       }
     }
     
-    vec pos_correct(batch_N);
+    vec pos_correct;
 
     int N_mini = batch_N + extra_N;
-    if (!use_target_Y) {
+    if (!use_target_Y && use_sgd) {
+      pos_correct.zeros(batch_N);
+
       for (int i = 0; i < batch_N; i++) {
         unsigned int full_ind;
         if (map_all_flag) {
@@ -693,10 +706,14 @@ bool NETSNE::run(int N, unsigned int *row_P, unsigned int *col_P, double *val_P,
     mat dY(no_dims, batch_N);
     if (use_target_Y) {
       dY = 2 * (Y_mini - target_Y.cols(sub2full.head(N_mini)));
-    } else {
+    } else if (use_sgd) {
       computeGradient(batch_N, extra_N, pos_correct, row_P_mini.memptr(),
           col_P_mini.memptr(), val_P_mini.memptr(),
           Y_mini.memptr(), N_mini, no_dims, dY.memptr(), theta,
+          iter < stop_lying_iter, map_all_flag ? batch_start : 0);
+    } else {
+      computeGradient(batch_N, extra_N, pos_correct, row_P,
+          col_P, val_P, Y_mini.memptr(), N_mini, no_dims, dY.memptr(), theta,
           iter < stop_lying_iter, map_all_flag ? batch_start : 0);
     }
 
@@ -878,7 +895,7 @@ bool NETSNE::run(int N, unsigned int *row_P, unsigned int *col_P, double *val_P,
       printf("Iteration %d: error is %f (50 iterations in %4.2f seconds)\n", iter + 1, C, elapsed);
       total_time += elapsed;
       
-      if ((iter + 1) % 100 == 0 || iter == max_iter - 1) {
+      if ((iter + 1) % CACHE_ITER == 0 || iter == max_iter - 1) {
         string it_str = to_string(iter + 1);
         if (iter == max_iter - 1) {
           it_str = "final";
@@ -886,7 +903,11 @@ bool NETSNE::run(int N, unsigned int *row_P, unsigned int *col_P, double *val_P,
 
         // Revert the ordering of data points to the initial ordering
         mat Y_tmp;
-        reorder_columns(Y_tmp, Y, X_perm_indices);
+        if (use_sgd) {
+          reorder_columns(Y_tmp, Y, X_perm_indices);
+        } else {
+          Y_tmp = Y;
+        }
 
         newfile = outdir;
         newfile /= "Y_" + it_str + ".txt";
@@ -973,9 +994,6 @@ void computeEdgeForces(unsigned int* row_P, unsigned int* col_P,
             for(unsigned int d = 0; d < dimension; d++) {
               D += buff[d] * buff[d];
             }
-            //D = val_P[i] / D;
-            // Sum positive force
-            //for(unsigned int d = 0; d < dimension; d++) pos_f[ind1 + d] += D * buff[d];
             
             D = 1 / D;
             for(unsigned int d = 0; d < dimension; d++) {
@@ -988,8 +1006,6 @@ void computeEdgeForces(unsigned int* row_P, unsigned int* col_P,
               qsum[n] += D;
             }
         }
-        //for(unsigned int d = 0; d < dimension; d++) printf("%f ", pos_f[ind1 + d]);
-        //printf("\n");
         ind1 += dimension;
     }
 }
@@ -998,10 +1014,8 @@ void computeEdgeForces(unsigned int* row_P, unsigned int* col_P,
 // Compute gradient of the t-SNE cost function (using Barnes-Hut algorithm)
 void NETSNE::computeGradient(int subN, int extraN, vec &pos_correct, unsigned int* inp_row_P, unsigned int* inp_col_P, double* inp_val_P, double* Y, int N, int D, double* dC, double theta, bool early_exaggeration, int ind_offset)
 {
-  //printf("subN(%d), extraN(%d), theta(%f), early(%d), offset(%d)\n", subN, extraN, theta, early_exaggeration, ind_offset);
     // Compute all terms required for t-SNE gradient
     double sum_Q = .0;
-    //double sum_Q_ans = .0;
     double* pos_f = (double*) calloc(subN * D, sizeof(double));
     double* neg_f = (double*) calloc(subN * D, sizeof(double));
     double* qsum;
@@ -1015,8 +1029,6 @@ void NETSNE::computeGradient(int subN, int extraN, vec &pos_correct, unsigned in
 
     computeEdgeForces(inp_row_P, inp_col_P, inp_val_P, subN, pos_f, 
         MATCH_POS_NEG ? neg_f : NULL, qsum, D, Y, ind_offset);
-
-    //printf("EdgeForces: %f, ", toc()); tic();
 
     SPTree* tree = new SPTree(D, Y, subN + extraN);
     for (int n = 0; n < subN; n++) {
@@ -1035,13 +1047,12 @@ void NETSNE::computeGradient(int subN, int extraN, vec &pos_correct, unsigned in
       double cur_qsum = 0.0;
       double neg_f_tmp[3] = {0};
       double neg_correct;
-      if (MATCH_POS_NEG) {
+      if (MATCH_POS_NEG && SGD_FLAG) {
         neg_correct = (N - 1 - ndup) / (double)(subN + extraN - 1 - ndup);
       } else {
         neg_correct = 1.0;
       }
 
-      //tree->computeNonEdgeForces(ind_offset + n, theta, neg_f + n * D, &sum_Q);
       tree->computeNonEdgeForces(ind_offset + n, theta, neg_f_tmp, &cur_qsum);
       for (int d = 0; d < D; d++) {
         neg_f[n * D + d] += neg_f_tmp[d] * neg_correct;
@@ -1066,11 +1077,18 @@ void NETSNE::computeGradient(int subN, int extraN, vec &pos_correct, unsigned in
     // Compute final t-SNE gradient
     for(int i = 0; i < subN; i++) {
       for (int j = 0; j < D; j++) {
-        //dC[i] = pos_f[i] - (neg_f_ans[i] / sum_Q_ans);
-        if (early_exaggeration) {
-          dC[i*D+j] = 12.0 * pos_f[i*D+j] * pos_correct(i) - (neg_f[i*D+j] / sum_Q) * (subN / (double) N);
+        if (!SGD_FLAG) {
+          if (early_exaggeration) {
+            dC[i*D+j] = 12.0 * pos_f[i*D+j] - (neg_f[i*D+j] / sum_Q);
+          } else {
+            dC[i*D+j] = pos_f[i*D+j] - (neg_f[i*D+j] / sum_Q);
+          }
         } else {
-          dC[i*D+j] = pos_f[i*D+j] * pos_correct(i) - (neg_f[i*D+j] / sum_Q) * (subN / (double) N);
+          if (early_exaggeration) {
+            dC[i*D+j] = 12.0 * pos_f[i*D+j] * pos_correct(i) - (neg_f[i*D+j] / sum_Q) * (subN / (double) N);
+          } else {
+            dC[i*D+j] = pos_f[i*D+j] * pos_correct(i) - (neg_f[i*D+j] / sum_Q) * (subN / (double) N);
+          }
         }
       }
     }
