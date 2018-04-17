@@ -3,18 +3,15 @@
 # Choose a different C++ compiler if needed
 CXX=g++
 
-# Provide C++ Boost library paths
+# Provide C++ Boost library paths (if installed in a non-standard location)
 BOOSTROOT= # Package directory (e.g., "/path/to/boost_1_66_0")
 BOOSTLIB= # Library path (e.g., "/path/to/boost_1_66_0/stage/lib")
 
-# Provide the directory with Armadillo header files
-ARMAINC= # e.g., "/path/to/armadillo-8.200.1/include"
-
-# (Optional) If OpenBLAS will be used with Armadillo,
-# provide the paths to the OpenBLAS library
-# More info: https://gist.github.com/BERENZ/ff274ebbf00ee111c708
-OBLASINC= # Include directory (e.g., /usr/include/openblas)
-OBLASLIB= # Library path (e.g., /usr/lib)
+# Provide paths to the Armadillo library (if installed in a non-standard location)
+# Make sure ARMALIB is in the system search path (e.g. LD_LIBRARY_PATH on Linux) 
+# when netsne is called
+ARMAINC= # e.g., "/path/to/armadillo/usr/include"
+ARMALIB= # e.g., "/path/to/armadillo/usr/lib/x86_64-linux-gnu"
 
 ##################################################
 
@@ -23,10 +20,9 @@ INCPATHS=$(if $(strip $(ARMAINC)),-I $(ARMAINC),) \
          $(if $(strip $(OBLASINC)),-I $(OBLASINC),)
 					 
 CXXFLAGS=-g -O2 $(INCPATHS) -march=native -std=c++11
-LIBS=-lboost_filesystem -lboost_system -lboost_program_options \
-		 $(if $(strip $(OBLASINC)$(OBLASLIB)),-lopenblas,)
+LIBS=-lboost_filesystem -lboost_system -lboost_program_options -larmadillo
 LDFLAGS=$(if $(strip $(BOOSTLIB)),-L $(BOOSTLIB),) \
-        $(if $(strip $(OBLASLIB)),-L $(OBLASLIB),)
+        $(if $(strip $(ARMALIB)),-L $(ARMALIB),)
 
 BUILD=build
 PROGS=bin
