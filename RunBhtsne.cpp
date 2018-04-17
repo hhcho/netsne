@@ -12,7 +12,7 @@ int main(int argc, char **argv) {
   po::options_description desc("Allowed options");
   desc.add_options()
     ("help", "produce help message")
-    ("input-file", po::value<string>()->value_name("FILE")->default_value("P.dat"), "name of binary input file containing P matrix (see ComputeP)")
+    ("input-P", po::value<string>()->value_name("FILE")->default_value("P.dat"), "name of binary input file containing P matrix (see ComputeP)")
     ("out-dir", po::value<string>()->value_name("DIR")->default_value("out"), "where to create output files; directory will be created if it does not exist")
     ("out-dim", po::value<int>()->value_name("NUM")->default_value(2), "number of output dimensions")
     ("max-iter", po::value<int>()->value_name("NUM")->default_value(1000), "maximum number of iterations")
@@ -24,11 +24,8 @@ int main(int argc, char **argv) {
     ("mom-switch-iter", po::value<int>()->value_name("NUM")->default_value(250), "duration (number of iterations) of initial momentum")
     ("early-exag-iter", po::value<int>()->value_name("NUM")->default_value(250), "duration (number of iterations) of early exaggeration")
     ("skip-random-init", po::bool_switch()->default_value(false), "skip random initialization")
-    ("init-map", po::value<string>()->value_name("FILE"), "specify starting positions of a subset of data; rest are initialized based on the average of k nearest-neighbors; must be provided with other --init options")
-    ("init-indices", po::value<string>()->value_name("FILE"), "list of indices (1-based) to go with the provided initial mappings; must be provided with other --init options")
-    ("init-X", po::value<string>()->value_name("FILE"), "feature vectors for finding nearest neighbors; must be provided with other --init options")
-    ("init-k", po::value<int>()->value_name("NUM")->default_value(5), "how many neighbors to use for knn-based initialization")
     ("batch-frac", po::value<double>()->value_name("NUM"), "what fraction of points to update for each iteration")
+    ("cache-iter", po::value<int>()->value_name("NUM")->default_value(INT_MAX, "INT_MAX"), "After every NUM iterations, write intermediary embeddings to disk. Final embedding is always reported.")
   ;
 
   po::variables_map vm;
@@ -42,7 +39,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  string infile = vm["input-file"].as<string>();
+  string infile = vm["input-P"].as<string>();
   string outdir = vm["out-dir"].as<string>();
 
   fsys::path dir(outdir);
@@ -59,7 +56,7 @@ int main(int argc, char **argv) {
   fsys::path paramfile = dir;
   paramfile /= "param.txt";
   ofstream ofs(paramfile.string().c_str());
-  ofs << "input-file: " << infile << endl;
+  ofs << "input-P: " << infile << endl;
   ofs << "out-dir: " << fsys::canonical(dir).string() << endl;
 
   int no_dims = vm["out-dim"].as<int>(); ofs << "out-dim: " << no_dims << endl;
@@ -72,25 +69,7 @@ int main(int argc, char **argv) {
   double momentum = vm["mom-init"].as<double>(); ofs << "mom-init: " << momentum << endl;
   double final_momentum = vm["mom-final"].as<double>(); ofs << "mom-final: " << final_momentum << endl;
   double eta = vm["learn-rate"].as<double>(); ofs << "learn-rate: " << eta << endl;
-
-  if (vm.count("init-map") || vm.count("init-indices") || vm.count("init-X")) {
-    if (!(vm.count("init-map") && vm.count("init-indices") && vm.count("init-X"))) {
-      cout << "Error: --init-map, --init-indices, and --init-X must be provided together" << endl;
-      return 1;
-    }
-
-    string init_map = vm["init-map"].as<string>(); ofs << "init-map: " << init_map << endl;
-    string init_indices = vm["init-indices"].as<string>(); ofs << "init-indices: " << init_indices << endl;
-    string init_X = vm["init-X"].as<string>(); ofs << "init-X: " << init_X << endl;
-    int init_k = vm["init-k"].as<int>(); ofs << "init-k: " << init_k << endl;
-
-    tsne->INIT_MAP_FLAG = true;
-    tsne->INIT_MAP = init_map;
-    tsne->INIT_INDICES = init_indices;
-    tsne->INIT_X = init_X;
-    tsne->INIT_K = init_k;
-
-  }
+  tsne->CACHE_ITER = vm["cache-iter"].as<int>(); ofs << "cache-iter: " << tsne->CACHE_ITER << endl;
 
   if (vm.count("batch-frac")) {
     double batch_frac = vm["batch-frac"].as<double>(); ofs << "batch-frac: " << batch_frac << endl;

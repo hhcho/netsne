@@ -67,10 +67,8 @@ int main(int argc, char **argv) {
     ("num-local-sample", po::value<int>()->value_name("NUM")->default_value(20), "number of local samples for each data point in the mini-batch")
     ("batch-frac", po::value<double>()->value_name("NUM")->default_value(0.05, "0.05"), "fraction of data to sample for mini-batch")
     ("min-sample-Z", po::value<double>()->value_name("NUM")->default_value(0.1, "0.1"), "minimum fraction of data to use for approximating the normalization factor Z in the gradient")
-    ("no-batch-norm", po::bool_switch()->default_value(false), "turn off batch normalization")
+    ("l2-reg", po::value<double>()->value_name("NUM")->default_value(0, "0"), "L2 regularization parameter")
     ("init-model-prefix", po::value<string>()->value_name("STR"), "prefix of model files for initialization")
-    ("monte-carlo-pos", po::bool_switch()->default_value(false), "use monte-carlo integration for positive gradient term")
-    ("match-pos-neg", po::bool_switch()->default_value(false), "compute negative forces for points sampled for positive force")
     ("step-method", po::value<string>()->value_name("STR")->default_value("adam"), "gradient step schedule; 'adam', 'mom' (momentum), 'mom_gain' (momentum with gains), 'fixed'")
     ("num-input-feat", po::value<int>()->value_name("NUM"), "if set, use only the first NUM features for the embedding function")
     ("init-map", po::bool_switch()->default_value(false), "output initial mapping for the entire data")
@@ -78,10 +76,12 @@ int main(int argc, char **argv) {
     ("num-units", po::value<int>()->value_name("NUM")->default_value(50), "number of units for each layer in the neural network")
     ("act-fn", po::value<string>()->value_name("STR")->default_value("relu"), "activation function of the neural network; 'sigmoid' or 'relu'")
     ("test-model", po::bool_switch()->default_value(false), "if set, use the model provided with --init-model-prefix and visualize the entire data set then terminate without training")
-    ("l2-reg", po::value<double>()->value_name("NUM")->default_value(0, "0"), "L2 regularization parameter")
     ("perm-iter", po::value<int>()->value_name("NUM")->default_value(INT_MAX, "INT_MAX"), "After every NUM iterations, permute the ordering of data points for fast mini-batching")
     ("cache-iter", po::value<int>()->value_name("NUM")->default_value(INT_MAX, "INT_MAX"), "After every NUM iterations, write intermediary embeddings and parameters to disk. Final embedding is always reported.")
     ("no-sgd", po::bool_switch()->default_value(false), "if set, do not use SGD acceleration; equivalent to t-SNE with an additional backpropagation step to train a neural network. Effective for small datasets")
+    //("batch-norm", po::bool_switch()->default_value(false), "turn on batch normalization")
+    //("monte-carlo-pos", po::bool_switch()->default_value(false), "use monte-carlo integration for positive gradient term")
+    //("match-pos-neg", po::bool_switch()->default_value(false), "compute negative forces for points sampled for positive force")
 
   ;
 
@@ -132,13 +132,15 @@ int main(int argc, char **argv) {
   netsne->N_SAMPLE_LOCAL = vm["num-local-sample"].as<int>(); ofs << "num-local-sample: " << netsne->N_SAMPLE_LOCAL << endl;
   netsne->MIN_SAMPLE_Z = vm["min-sample-Z"].as<double>(); ofs << "min-sample-Z: " << netsne->MIN_SAMPLE_Z << endl;
   netsne->STOP_LYING = vm["early-exag-iter"].as<int>(); ofs << "early-exag-iter: " << netsne->STOP_LYING << endl;
-  netsne->BATCH_NORM = !vm["no-batch-norm"].as<bool>(); ofs << "no-batch-norm: " << !netsne->BATCH_NORM << endl;
-  netsne->MONTE_CARLO_POS = vm["monte-carlo-pos"].as<bool>(); ofs << "monte-carlo-pos: " << netsne->MONTE_CARLO_POS << endl;
-  netsne->MATCH_POS_NEG = vm["match-pos-neg"].as<bool>(); ofs << "match-pos-neg: " << netsne->MATCH_POS_NEG << endl;
   netsne->STEP_METHOD = vm["step-method"].as<string>(); ofs << "step-method: " << netsne->STEP_METHOD << endl;
   netsne->LEARN_RATE = vm["learn-rate"].as<double>(); ofs << "learn-rate: " <<  netsne->LEARN_RATE << endl;
   netsne->L2_REG = vm["l2-reg"].as<double>(); ofs << "l2-reg: " <<  netsne->L2_REG << endl;
   netsne->SGD_FLAG = !vm["no-sgd"].as<bool>(); ofs << "sgd: " << netsne->SGD_FLAG << endl;
+  netsne->PERM_ITER = vm["perm-iter"].as<int>(); ofs << "perm-iter: " << netsne->PERM_ITER << endl;
+  netsne->CACHE_ITER = vm["cache-iter"].as<int>(); ofs << "cache-iter: " << netsne->CACHE_ITER << endl;
+  //netsne->BATCH_NORM = vm["batch-norm"].as<bool>(); ofs << "batch-norm: " << netsne->BATCH_NORM << endl;
+  //netsne->MONTE_CARLO_POS = vm["monte-carlo-pos"].as<bool>(); ofs << "monte-carlo-pos: " << netsne->MONTE_CARLO_POS << endl;
+  //netsne->MATCH_POS_NEG = vm["match-pos-neg"].as<bool>(); ofs << "match-pos-neg: " << netsne->MATCH_POS_NEG << endl;
 
   netsne->MODEL_PREFIX_FLAG = vm.count("init-model-prefix");
   if (netsne->MODEL_PREFIX_FLAG) {

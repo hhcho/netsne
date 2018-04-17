@@ -34,11 +34,10 @@
 #ifndef TSNE_H
 #define TSNE_H
 
-/* Hoon's code */
 #include <vector>
 #include <string>
 #include <boost/filesystem.hpp>
-/***************/
+#include <limits.h>
 
 static inline double sign(double x) { return (x == .0 ? .0 : (x < .0 ? -1.0 : 1.0)); }
 
@@ -51,21 +50,15 @@ public:
         int mom_switch_iter, double momentum, double final_momentum, double eta, boost::filesystem::path outdir);
     bool load_P(std::string infile, int &N, unsigned int** row_P, unsigned int** col_P, double** val_P);
 
-    bool INIT_MAP_FLAG = false;
-    std::string INIT_MAP = "";
-    std::string INIT_INDICES = "";
-    int INIT_K = 5;
-    std::string INIT_X = "";
-
     bool BATCH_FLAG = false;
     double BATCH_FRAC = 1;
+    int CACHE_ITER = INT_MAX;
 
 private:
-/* Hoon's code */
+
 std::vector<int> iters;
 std::vector<double> objectives;
 std::vector<double> elapsed_times;
-/***************/
 
 
     void computeGradient(unsigned int* inp_row_P, unsigned int* inp_col_P, double* inp_val_P, double* Y, int N, int D, double* dC, double theta, bool early_exaggeration);

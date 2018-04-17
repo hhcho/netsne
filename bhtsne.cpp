@@ -167,119 +167,7 @@ bool TSNE::run(int N, unsigned int *row_P, unsigned int *col_P, double *val_P,
     gains[i] = 1;
   }
 
-	// Initialize solution
-  if (INIT_MAP_FLAG) {
-    cout << "Initializing solution using " << INIT_MAP << endl;
-    // Read index list
-    ifstream ifs(INIT_INDICES.c_str());
-    if (!ifs.is_open()) {
-      cout << "Error: failed to open " << INIT_INDICES << endl;
-      return false;
-    }
-
-    map<int, int> init_inds_map;
-    vector<int> init_inds;
-    int ind;
-    int cur_ind = 0;
-    while (ifs >> ind) {
-      ind--; // make it zero-based
-      init_inds.push_back(ind);
-      init_inds_map[ind] = cur_ind;
-      cur_ind++;
-    }
-    ifs.close();
-
-    int init_N = init_inds.size();
-
-    cout << "Indices for " << init_N << " initial points loaded" << endl;
-
-
-    // Read inital mappings from file
-    double *init_Y = (double *)malloc(sizeof(double) * init_N * no_dims);
-    if (init_Y == NULL) {
-      cout << "Error: memory alloc failed for init_Y" << endl;
-      return false;
-    }
-    FILE *h = fopen(INIT_MAP.c_str(), "rb");
-	  if (h == NULL) {
-      cout << "Error: failed to open " << INIT_MAP << endl;
-      return false;
-	  }
-    size_t ret = fread(init_Y, sizeof(double), init_N * no_dims, h);
-    if (ret != init_N * no_dims) {
-      cout << "Error: failed to read " << init_N * no_dims << " numbers from " << INIT_MAP << ", got " << ret << endl;
-      return false;
-    }
-    fclose(h);
-
-    // Read input features for all data points
-    double *X;
-    int num_instances;
-    int num_features;
-    int D = 50; // number of features to use
-
-	  if (!load_data(INIT_X, &X, num_instances, num_features)) {
-      return 1;
-    }
-    cout << "Data feature matrix loaded" << endl;
-    truncate_data(X, num_instances, num_features, D);
-    cout << "Data feature matrix truncated to " << D << " features" << endl;
-
-    // Normalize input data (to prevent numerical problems)
-    zeroMean(X, num_instances, D);
-    double max_X = 0;
-    for (size_t i = 0; i < num_instances * D; i++) {
-      if (fabs(X[i]) > max_X) {
-        max_X = fabs(X[i]);
-      }
-    }
-    for (size_t i = 0; i < num_instances * D; i++) {
-      X[i] /= max_X;
-    }
-    cout << "Data feature matrix normalized" << endl;
-
-    // Build ball tree on data set
-    VpTree<DataPoint, euclidean_distance>* tree = new VpTree<DataPoint, euclidean_distance>();
-    vector<DataPoint> obj_X(init_N, DataPoint(D, -1, X));
-    for (int n = 0; n < init_N; n++) {
-      obj_X[n] = DataPoint(D, n, X + init_inds[n] * D);
-    }
-    tree->create(obj_X);
-
-    cout << "VpTree created" << endl;
-
-    // Loop over all points to find nearest neighbors
-    vector<DataPoint> indices;
-    vector<double> distances;
-    for (int n = 0; n < N; n++) {
-
-      if (n % 10000 == 0) printf(" - point %d of %d\n", n, N);
-      if (init_inds_map.find(n) != init_inds_map.end()) {
-        // Point is in the initial set
-        Y[no_dims * n] = init_Y[no_dims * init_inds_map[n]];
-        Y[no_dims * n + 1] = init_Y[no_dims * init_inds_map[n] + 1];
-      } else {
-        // Find nearest neighbors
-        indices.clear();
-        distances.clear();
-        DataPoint query(D, -1, X + n * D);
-        tree->search(query, INIT_K, &indices, &distances);
-
-        Y[no_dims * n] = 0;
-        Y[no_dims * n + 1] = 0;
-        for (int pt = 0; pt < INIT_K; pt++) {
-          Y[no_dims * n] += init_Y[no_dims * indices[pt].index()];
-          Y[no_dims * n + 1] += init_Y[no_dims * indices[pt].index() + 1];
-        }
-        Y[no_dims * n] /= INIT_K;
-        Y[no_dims * n + 1] /= INIT_K;
-      }
-    }
-
-    free(X);
-    free(init_Y);
-    free(tree);
-  } else if (!skip_random_init) {
+  if (!skip_random_init) {
     for (int i = 0; i < N * no_dims; i++) {
       Y[i] = randn() * 0.0001;
     }
@@ -303,17 +191,6 @@ bool TSNE::run(int N, unsigned int *row_P, unsigned int *col_P, double *val_P,
 
   logfs << iters[0] << "\t" << objectives[0] << "\t" << elapsed_times[0] << endl;
   logfs.flush();
-
-  string filename = string("Y_") + to_string(0) + string(".txt");
-  newfile = outdir;
-  newfile /= filename;
-
-  //FILE *fp = fopen(newfile.string().c_str(), "wb");
-  //fwrite(Y, sizeof(double), no_dims * N, fp);
-  //fclose(fp);
-  mat Y_arma(Y, no_dims, N, true); // convert Y to armadillo matrix
-  Y_arma = Y_arma.t();
-  Y_arma.save(newfile.string(), arma_ascii);
 
   int batch_N;
 
@@ -379,7 +256,7 @@ bool TSNE::run(int N, unsigned int *row_P, unsigned int *col_P, double *val_P,
       logfs << iters.back() << "\t" << objectives.back() << "\t" << elapsed_times.back() << endl;
       logfs.flush();
 
-      if ((iter + 1) % 100 == 0 || iter == max_iter - 1) {
+      if ((iter + 1) % CACHE_ITER == 0 || iter == max_iter - 1) {
         string filename;
         if (iter == max_iter - 1) {
           filename = "Y_final.txt";

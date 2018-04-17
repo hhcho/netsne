@@ -855,12 +855,6 @@ bool NETSNE::run(int N, unsigned int *row_P, unsigned int *col_P, double *val_P,
     if (((iter + 1) % 50 == 0 || iter == max_iter - 1)) {
       t_end = chrono::high_resolution_clock::now();
 
-      printf("Norm of dW:");
-      for (int i = 0; i < nlayers; i++) {
-        printf(" L%d (%f)", i, norm(dW[i], "fro"));
-      }
-      printf("\n");
-
       // Forward propagation - Full pass
       for (int i = 0; i < nlayers; i++) {
         A[i] = W[i].head_cols(W[i].n_cols - 1) * ((i == 0) ? X : A[i-1]);
@@ -933,7 +927,7 @@ bool NETSNE::run(int N, unsigned int *row_P, unsigned int *col_P, double *val_P,
           newfile /= "model_" + it_str + "_L" + to_string(i) + "_W.txt";
           W[i].save(newfile.string(), arma_ascii);
 
-          if (i < nlayers) {
+          if (batch_norm && i < nlayers) {
             newfile = outdir;
             newfile /= "model_" + it_str + "_L" + to_string(i) + "_BN_beta.txt";
             beta_BN[i].save(newfile.string(), arma_ascii);
