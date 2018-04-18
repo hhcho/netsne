@@ -51,8 +51,8 @@ int main(int argc, char **argv) {
   po::options_description desc("Allowed options");
   desc.add_options()
     ("help", "produce help message")
-    ("input-P", po::value<string>()->value_name("FILE")->default_value("P.dat"), "name of binary input file containing P matrix (see ComputeP)")
     ("input-X", po::value<string>()->value_name("FILE")->default_value("data.dat"), "name of binary input file containing data feature matrix (see prepare_input.m)")
+    ("input-P", po::value<string>()->value_name("FILE")->default_value("P.dat"), "name of binary input file containing P matrix (see ComputeP)")
     ("input-Y", po::value<string>()->value_name("FILE"), "if this option is provided, net-SNE will train to match the provided embedding instead of using the P matrix")
     ("out-dir", po::value<string>()->value_name("DIR")->default_value("out"), "where to create output files; directory will be created if it does not exist")
     ("out-dim", po::value<int>()->value_name("NUM")->default_value(2), "number of output dimensions")
@@ -65,7 +65,7 @@ int main(int argc, char **argv) {
     ("mom-switch-iter", po::value<int>()->value_name("NUM")->default_value(250), "duration (number of iterations) of initial momentum")
     ("early-exag-iter", po::value<int>()->value_name("NUM")->default_value(250), "duration (number of iterations) of early exaggeration")
     ("num-local-sample", po::value<int>()->value_name("NUM")->default_value(20), "number of local samples for each data point in the mini-batch")
-    ("batch-frac", po::value<double>()->value_name("NUM")->default_value(0.05, "0.05"), "fraction of data to sample for mini-batch")
+    ("batch-frac", po::value<double>()->value_name("NUM")->default_value(0.1, "0.1"), "fraction of data to sample for mini-batch")
     ("min-sample-Z", po::value<double>()->value_name("NUM")->default_value(0.1, "0.1"), "minimum fraction of data to use for approximating the normalization factor Z in the gradient")
     ("l2-reg", po::value<double>()->value_name("NUM")->default_value(0, "0"), "L2 regularization parameter")
     ("init-model-prefix", po::value<string>()->value_name("STR"), "prefix of model files for initialization")
@@ -76,6 +76,7 @@ int main(int argc, char **argv) {
     ("num-units", po::value<int>()->value_name("NUM")->default_value(50), "number of units for each layer in the neural network")
     ("act-fn", po::value<string>()->value_name("STR")->default_value("relu"), "activation function of the neural network; 'sigmoid' or 'relu'")
     ("test-model", po::bool_switch()->default_value(false), "if set, use the model provided with --init-model-prefix and visualize the entire data set then terminate without training")
+    ("no-target", po::bool_switch()->default_value(false), "if this option is provided (ignored if --test-model is not set), then only the new embedding is printed, without the objective value")
     ("perm-iter", po::value<int>()->value_name("NUM")->default_value(INT_MAX, "INT_MAX"), "After every NUM iterations, permute the ordering of data points for fast mini-batching")
     ("cache-iter", po::value<int>()->value_name("NUM")->default_value(INT_MAX, "INT_MAX"), "After every NUM iterations, write intermediary embeddings and parameters to disk. Final embedding is always reported.")
     ("no-sgd", po::bool_switch()->default_value(false), "if set, do not use SGD acceleration; equivalent to t-SNE with an additional backpropagation step to train a neural network. Effective for small datasets")
@@ -113,20 +114,25 @@ int main(int argc, char **argv) {
   paramfile /= "param.txt";
   ofstream ofs(paramfile.string().c_str());
 
+  NETSNE* netsne = new NETSNE();
+
   bool use_known_Y = vm.count("input-Y");
   string infile_Y;
 
-  if (use_known_Y) {
-    infile_Y = vm["input-Y"].as<string>();
-    ofs << "input-Y: " << infile_Y << endl;
-    cout << "Learning to match the provided embedding: " << infile_Y << endl;
-  } else {
-    ofs << "input-P: " << infile_P << endl;
+  netsne->TEST_RUN = vm["test-model"].as<bool>();
+  netsne->NO_TARGET = netsne->TEST_RUN && vm["no-target"].as<bool>();
+
+  if (!netsne->NO_TARGET) {
+    if (use_known_Y) {
+      infile_Y = vm["input-Y"].as<string>();
+      ofs << "input-Y: " << infile_Y << endl;
+      cout << "Learning to match the provided embedding: " << infile_Y << endl;
+    } else {
+      ofs << "input-P: " << infile_P << endl;
+    }
   }
   ofs << "input-X: " << infile_X << endl;
   ofs << "out-dir: " << fsys::canonical(dir).string() << endl;
-
-  NETSNE* netsne = new NETSNE();
 
   netsne->BATCH_FRAC = vm["batch-frac"].as<double>(); ofs << "batch-frac: " << netsne->BATCH_FRAC << endl;
   netsne->N_SAMPLE_LOCAL = vm["num-local-sample"].as<int>(); ofs << "num-local-sample: " << netsne->N_SAMPLE_LOCAL << endl;
@@ -148,7 +154,6 @@ int main(int argc, char **argv) {
   }
   ofs << "init-model-prefix: " << netsne->MODEL_PREFIX << endl;
 
-  netsne->TEST_RUN = vm["test-model"].as<bool>();
   if (netsne->TEST_RUN) {
     netsne->COMPUTE_INIT = true;
 
@@ -226,7 +231,12 @@ int main(int argc, char **argv) {
   double *val_P = NULL;
   mat target_Y;
 
-  if (use_known_Y) {
+  if (netsne->NO_TARGET) {
+
+    cout << "No target provided" << endl;
+    N = X.n_cols;
+
+  } else if (use_known_Y) {
 
     cout << "Loading target Y ... ";
     target_Y.load(infile_Y, arma_ascii);

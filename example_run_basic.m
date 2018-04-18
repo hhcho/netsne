@@ -10,15 +10,15 @@ system('bin/ComputeP --input-file example_data/pollen_X.dat --output-file exampl
 
 % Learn embedding
 fprintf('Running netsne ...\n');
-system('bin/RunNetsne --input-P example_data/pollen_P.dat --input-X example_data/pollen_X.dat --out-dir example_data/netsne --no-sgd');
+system('bin/RunNetsne --input-P example_data/pollen_P.dat --input-X example_data/pollen_X.dat --out-dir example_data/netsne_pollen --no-sgd');
 
 fprintf('Running bhtsne ...\n');
-system('bin/RunBhtsne --input-P example_data/pollen_P.dat --out-dir example_data/bhtsne');
+system('bin/RunBhtsne --input-P example_data/pollen_P.dat --out-dir example_data/bhtsne_pollen');
 
 % Plot results
-fprintf('Plotting ...\n');
-YN = dlmread('example_data/netsne/Y_final.txt', '', 2, 0);
-YB = dlmread('example_data/bhtsne/Y_final.txt', '', 2, 0);
+fprintf('Plotting results ...\n');
+YN = dlmread('example_data/netsne_pollen/Y_final.txt', '', 2, 0);
+YB = dlmread('example_data/bhtsne_pollen/Y_final.txt', '', 2, 0);
 labels = dlmread('../data/pollen/labels.txt');
 figure;
 subplot(1,2,1);

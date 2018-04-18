@@ -1,4 +1,4 @@
-# netsne
+# net-SNE
 
 This repository contains software for net-SNE, a neural netork-based visualization tool developed for single cell RNA sequencing datasets.
 
@@ -19,10 +19,11 @@ Cell Systems (accepted), 2018
     - `BOOSTROOT`, `BOOSTLIB`: Boost library paths (base directory for the package and library directory containing linkable .a/.so files, respectively)
     - `ARMAINC`,`ARMALIB`: Armadillo library paths (directory containing header files and  directory with linkable .a/.so files, respectively); only needed if Armadillo is installed in a non-standard location, in which case `ARMALIB` should also be included in the system's search path for shared libraries (e.g., `LD_LIBRARY_PATH` on Linux) before running net-SNE.
 
-2. Inside the netsne directory, run `make`. This will create the executables `RunNetsne`, `RunBhtsne`, and `ComputeP` in a subdirectory named `bin`.
+2. Inside the net-SNE directory, run `make`. This will create the executables `RunNetsne`, `RunBhtsne`, and `ComputeP` in a subdirectory named `bin`.
 
-##### Example Run
-The following is a step-by-step explanation of our example MATLAB script `example_run.m`:
+##### Example Runs
+We provide three example MATLAB scripts for different use cases of net-SNE: `example_run_basic.m`, `example_run_crossdataset.m`, and `example_run_millioncell.m`. See the comments in each script for more information. The following is a step-by-step description of `example_run_basic.m`, which serves a good starting point: 
+
 1. *Prepare dataset.* In `example_data` directory we provide an example single-cell RNA-seq dataset from [Pollen et al., *Nature Biotechnology*, 2014](https://www.nature.com/articles/nbt.2967). The data file `pollen.txt` contains a matrix in space-delimited text format, where each row is a gene (or a unique molecule) and each column is a sample (i.e., a cell). Each element represents a measure of expression (e.g., normalized read counts). Known subtypes of the cells are provided in `pollen_labels.txt`.
 
 2. *Preprocess.* We provide a MATLAB script `prepare_input.m` for (optionally) performing dimensionality reduction via principal component analysis and saving the data in binary format for subsequent steps. In MATLAB, run:\
@@ -30,7 +31,7 @@ The following is a step-by-step explanation of our example MATLAB script `exampl
 `prepare_input(X', 'example_data/pollen_X.dat', 50, 1, 'example_data/pollen_pca.mat')`\
 This will save the processed data with respect to top 50 principal components to `example_data/pollen_X.dat`. See the comments in `prepare_input.m` for more information about the arguments.
 
-3. *Compute input similarities.* Like t-SNE, net-SNE learns the embedding by placing cells closer to each other in the visualization if they are more similar in the input data. Using `bin/ComputeP`, which invokes a subroutine from the [original t-SNE implementation](https://github.com/lvdmaaten/bhtsne), we can construct a k-Nearest Neighbor (k-NN) graph approximation to the input similarity matrix (denoted *P* in t-SNE). In the command-line terminal, run:\
+3. *Compute input similarities.* Like t-SNE, net-SNE learns the embedding by placing cells closer to each other in the visualization if they are more similar in the input data. Using `bin/ComputeP`, which invokes a subroutine from the [original t-SNE implementation](https://github.com/lvdmaaten/bhtsne), we can construct a k-Nearest Neighbor (k-NN) graph approximation of the input similarity matrix (denoted *P* in t-SNE). In the command-line terminal, run:\
 `bin/ComputeP --input-file example_data/pollen_X.dat --output-file example_data/pollen_P.dat`\
 This saves the input similarity matrix to `example_data/pollen_P.dat`. To see the list of supported arguments, run `bin/ComputeP --help`.
 
@@ -45,7 +46,7 @@ This outputs the final model and the embedding in the `example_data/netsne` dire
 `scatter(Y(:,1), Y(:,2), 10, labels, 'filled')`
 
 ##### Notes
-Our software is based on the implementation of Barnes-Hut t-SNE developed by Laurens van der Maaten at Delft University of Technology, available at: https://github.com/lvdmaaten/bhtsne
+Our software is based on the implementation of Barnes-Hut t-SNE developed by Laurens van der Maaten at Delft University of Technology, available at: https://github.com/lvdmaaten/bhtsne.
 
 We are working on releasing wrappers in other programming languages such as R and Python. If you would like an update when these become available, feel free to drop us a note at the email address below.
 

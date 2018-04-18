@@ -171,6 +171,7 @@ bool NETSNE::run(int N, unsigned int *row_P, unsigned int *col_P, double *val_P,
 
   bool use_sgd = SGD_FLAG;
   bool use_target_Y = val_P == NULL;
+  bool no_target = NO_TARGET;
   if (use_target_Y || !use_sgd) {
     N_SAMPLE_LOCAL = 0;
     MIN_SAMPLE_Z = 0;
@@ -188,18 +189,19 @@ bool NETSNE::run(int N, unsigned int *row_P, unsigned int *col_P, double *val_P,
 
   int D = X.n_rows;
 
-  printf("Feature matrix: %llu x %llu\n", X.n_rows, X.n_cols);
-  printf("eta: %f, max_iter: %d, stop_lying: %d\n", LEARN_RATE, max_iter, stop_lying_iter);
-  if (use_sgd) {
-    printf("batch_frac: %f, n_sample_local: %d\n", BATCH_FRAC, N_SAMPLE_LOCAL);
-  }
+  if (!TEST_RUN) {
+    printf("eta: %f, max_iter: %d, stop_lying: %d\n", LEARN_RATE, max_iter, stop_lying_iter);
+    if (use_sgd) {
+      printf("batch_frac: %f, n_sample_local: %d\n", BATCH_FRAC, N_SAMPLE_LOCAL);
+    }
 
-  if(rand_seed >= 0) {
-    printf("Using random seed: %d\n", rand_seed);
-    srand((unsigned int) rand_seed);
-  } else {
-    printf("Using current time as random seed...\n");
-    srand(time(NULL));
+    if(rand_seed >= 0) {
+      printf("Using random seed: %d\n", rand_seed);
+      srand((unsigned int) rand_seed);
+    } else {
+      printf("Using current time as random seed...\n");
+      srand(time(NULL));
+    }
   }
 
   printf("Using no_dims = %d  and theta = %f\n", no_dims, theta);
@@ -409,7 +411,7 @@ bool NETSNE::run(int N, unsigned int *row_P, unsigned int *col_P, double *val_P,
   }
   
 
-  if (!use_target_Y && use_sgd) {
+  if (!no_target && !use_target_Y && use_sgd) {
     printf("Sorting P ... ");
     sort_P(N, row_P, col_P, val_P);
     printf("done\n");
@@ -425,7 +427,7 @@ bool NETSNE::run(int N, unsigned int *row_P, unsigned int *col_P, double *val_P,
   }
 
   vec P_rowsum(N);
-  if (!use_target_Y && use_sgd) {
+  if (!no_target && !use_target_Y && use_sgd) {
     for (int i = 0; i < N; i++) {
       // Note P is sorted
       // Add small values first for numerical stability
@@ -454,7 +456,7 @@ bool NETSNE::run(int N, unsigned int *row_P, unsigned int *col_P, double *val_P,
 
   int subN, nbatch, min_sample;
 
-  if (use_sgd) {
+  if (!TEST_RUN && use_sgd) {
     subN = ceil(N * BATCH_FRAC);
     nbatch = ((N-1) / subN) + 1;
     min_sample = ceil(N * MIN_SAMPLE_Z);
@@ -525,28 +527,30 @@ bool NETSNE::run(int N, unsigned int *row_P, unsigned int *col_P, double *val_P,
     Y = W[nlayers] * A[nlayers - 1];
 
     printf("Init Y computed\n");
-    if (use_target_Y) {
-      C0 = sqrt(sum(sum(square(target_Y - Y))));
-      printf("Initial Norm: %f\n", C0);
-    } else {
-      C0 = evaluateError(row_P, col_P, val_P, Y.memptr(), N, no_dims, theta, P_rowsum);
-      printf("Initial KL: %f\n", C0);
-    }
+    if (!no_target) {
+      if (use_target_Y) {
+        C0 = sqrt(sum(sum(square(target_Y - Y))));
+      } else {
+        C0 = evaluateError(row_P, col_P, val_P, Y.memptr(), N, no_dims, theta, P_rowsum);
+      }
+      printf("Iteration 0: error is %f\n", C0);
+
+      iters.push_back(0);
+      objectives.push_back(C0);
+      elapsed_times.push_back(0);
+
+      logfs << iters[0] << "\t" << objectives[0] << "\t" << elapsed_times[0] << endl;
+      logfs.flush();
+    } 
     
     newfile = outdir;
-    newfile /= "Y_0.txt";
+    if (TEST_RUN || max_iter <= 0) {
+      newfile /= "Y_final.txt";
+    } else {
+      newfile /= "Y_0.txt";
+    }
     mat Y_tmp = Y.t();
     Y_tmp.save(newfile.string(), arma_ascii);
-
-    iters.push_back(0);
-    objectives.push_back(C0);
-    elapsed_times.push_back(0);
-
-    printf("Iteration 0: error is %f\n", C0);
-
-    logfs << iters[0] << "\t" << objectives[0] << "\t" << elapsed_times[0] << endl;
-    logfs.flush();
-
   }
 
   if (TEST_RUN) { 

@@ -5,7 +5,7 @@ function prepare_input(X, output_file, initial_dims, svd_type, transform_file)
 %   output_file: name of the binary data file to be created [data.dat]
 %   initial_dims: input dimensionality for net-SNE/t-SNE
 %                 if this is smaller than # of columns of X, PCA is performed
-%                 [1000]
+%                 [50]
 %   svd_type: 0 for using existing transformation in transform_file,
 %             1 for performing partial SVD (use if initial_dims is very
 %               small compared to the # of columns of X), and
@@ -17,7 +17,7 @@ function prepare_input(X, output_file, initial_dims, svd_type, transform_file)
 %                   [pca_transform.mat] 
 
   if ~exist('initial_dims', 'var') || isempty(initial_dims)
-    initial_dims = 1000;
+    initial_dims = 50;
   end
 
   if ~exist('output_file', 'var') || isempty(output_file)

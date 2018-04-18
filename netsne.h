@@ -62,6 +62,7 @@ public:
   int STOP_LYING = 250;
   std::string MODEL_PREFIX = "";
   bool TEST_RUN = false;
+  bool NO_TARGET = false;
   bool MODEL_PREFIX_FLAG = false;
   bool MONTE_CARLO_POS = false;
   std::string STEP_METHOD = "relu";
