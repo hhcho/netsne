@@ -67,8 +67,8 @@ public:
   bool MONTE_CARLO_POS = false;
   std::string STEP_METHOD = "relu";
   int MOM_SWITCH_ITER = 250;
-  int MOM_INIT = 0.5;
-  int MOM_FINAL = 0.8;
+  double MOM_INIT = 0.5;
+  double MOM_FINAL = 0.8;
   bool COMPUTE_INIT = false;
   bool MATCH_POS_NEG = false;
   bool BATCH_NORM = false;
