@@ -25,8 +25,11 @@ end
 % Preprocess pbmc68k
 fprintf('Loading pbmc68k data ...\n');
 X = load_mtx('example_data/pbmc68k.mtx', true);
+zero_filt = sum(X,2) == 0; % remove zero rows
+X = X(~zero_filt,:);
+
 fprintf('Preprocessing ...\n');
-prepare_input(full(X'), 'example_data/pbmc68k_X.dat', 50, 1, 'example_data/pbmc68k_pca.mat')
+prepare_input(X', 'example_data/pbmc68k_X.dat', 50, 3, 'example_data/pbmc68k_pca.mat')
 
 % Compute input similarities
 fprintf('Computing input similarities ...\n');
@@ -43,6 +46,7 @@ system('bin/RunNetsne --input-Y example_data/bhtsne_pbmc68k/Y_final.txt --input-
 % Preprocess bcells
 fprintf('Loading bcells ...\n');
 Xnew = load_mtx('example_data/bcells.mtx', true);
+Xnew = Xnew(~zero_filt,:);
 fprintf('Preprocessing using the parameters from pbmc68k ...\n');
 prepare_input(full(Xnew'), 'example_data/bcells_X.dat', 50, 0, 'example_data/pbmc68k_pca.mat');
 
