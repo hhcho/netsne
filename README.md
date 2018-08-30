@@ -3,9 +3,9 @@
 This repository contains software for net-SNE, a neural netork-based visualization tool developed for single cell RNA sequencing datasets.
 
 ##### Reference
-"Neural Data Visualization for Scalable and Generalizable Single Cell Analysis"\
+"Generalizable and Scalable Visualization of Single-Cell Data Using Neural Networks"\
 Hyunghoon Cho, Bonnie Berger, and Jian Peng\
-Cell Systems (accepted), 2018
+Cell Systems, 2018
 
 ##### Dependencies
 - [Armadillo](http://arma.sourceforge.net/) for matrix/vector operations (developed with version 8.2).
@@ -48,7 +48,9 @@ This outputs the final model and the embedding in the `example_data/netsne` dire
 ##### Notes
 Our software is based on the implementation of Barnes-Hut t-SNE developed by Laurens van der Maaten at Delft University of Technology, available at: https://github.com/lvdmaaten/bhtsne.
 
-We are working on releasing wrappers in other programming languages such as R and Python. If you would like an update when these become available, feel free to drop us a note at the email address below.
+We are working on releasing wrappers in other programming languages (e.g. Python). If you would like an update when these become available, feel free to drop us a note at the email address below.
+
+[2018/8/7] R wrapper is available at https://github.com/schwikowskilab/rNetSNE. Developed by Pierre Bost and Florian Specque.
 
 ##### Contact for Questions
 Hoon Cho, hhcho@mit.edu
