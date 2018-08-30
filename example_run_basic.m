@@ -1,6 +1,7 @@
 % Preprocess data
 fprintf('Loading data ...\n');
-X = dlmread('../data/pollen/matrix.txt');
+%X = dlmread('../data/pollen/matrix.txt');
+X = dlmread('example_data/pollen.txt');
 fprintf('Preprocessing ...\n');
 prepare_input(X', 'example_data/pollen_X.dat', 50, 1, 'example_data/pollen_pca.mat')
 
@@ -19,7 +20,7 @@ system('bin/RunBhtsne --input-P example_data/pollen_P.dat --out-dir example_data
 fprintf('Plotting results ...\n');
 YN = dlmread('example_data/netsne_pollen/Y_final.txt', '', 2, 0);
 YB = dlmread('example_data/bhtsne_pollen/Y_final.txt', '', 2, 0);
-labels = dlmread('../data/pollen/labels.txt');
+labels = dlmread('example_data/pollen_labels.txt');
 figure;
 subplot(1,2,1);
 scatter(YN(:,1), YN(:,2), 10, labels, 'filled')
